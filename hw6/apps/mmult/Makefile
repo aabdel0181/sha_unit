@@ -48,21 +48,34 @@ HOST_SOURCES = fpga/Host.cpp ../../common/EventTimer.cpp ../../common/Utilities.
 HOST_OBJECTS =$(HOST_SOURCES:.cpp=.o)
 HOST_EXE = host
 
-CPU_SOURCES = cpu/Host.cpp ../../common/EventTimer.cpp ../../common/Utilities.cpp
+CPU_SOURCES = cpu/Host.cpp ../../common/EventTimer.cpp ../../common/Utilities.cpp cpu/lzw_hw.c cpu/cmd_sha.cpp
 CPU_OBJECTS=$(CPU_SOURCES:.cpp=.o)
 CPU_EXE = mmult_cpu
 
+SHA_SOURCES = sha_verify/test.cpp 
+SHA_OBJECTS = $(SHA_SOURCES:.cpp=.o)
+SHA_EXE = sha_test
+
 .PHONY: cpu
+
+sha: $(SHA_EXE)
+$(SHA_EXE): $(SHA_OBJECTS)
+	$(HOST_CXX) -I./fpga/hls/ -I./cpu -o "$@" $(+) $(LDFLAGS) -lcrypto	
+
 cpu: $(CPU_EXE)
 
 $(CPU_EXE): $(CPU_OBJECTS)
-	$(HOST_CXX) -I./fpga/hls/ -o "$@" $(+) $(LDFLAGS)
+	$(HOST_CXX) -I./fpga/hls/ -I./cpu -o "$@" $(+) $(LDFLAGS) -lcrypto
+
 
 $(HOST_EXE): $(HOST_OBJECTS)
 	$(HOST_CXX) -o "$@" $(+) $(LDFLAGS)
-
 .cpp.o:
-	$(HOST_CXX) $(CXXFLAGS) -I./fpga/hls/ -I../../common -o "$@" "$<"
+	$(HOST_CXX) $(CXXFLAGS) -I./fpga/hls/ -I../../common -I./cpu -o "$@" "$<"
+
+.c.o:
+	$(HOST_CXX) $(CXXFLAGS) -I./fpga/hls/ -I../../common -I./cpu -o "$@" "$<"
+
 
 #
 # primary build targets
@@ -76,6 +89,8 @@ fpga: package/sd_card.img
 clean-cpu:
 	-$(RM) $(CPU_EXE) $(CPU_OBJECTS) 
 
+clean-sha: 
+	-$(RM) $(SHA_EXE) $(SHA_OBJECTS)
 clean-host:
 	-$(RM) $(HOST_EXE) $(HOST_OBJECTS) 
 
